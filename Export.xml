@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="wizard_genadprinotfa" model="ir.ui.view">
+            <field name="name">Export File Prima Nota Ad-Hoc</field>
+            <field name="model">gen_adprinot_doc</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Genera File Fatture Ad-Hoc">
+                    <group col="6" colspan="6">
+                        <group colspan="4" >
+                            <field name='dadatadoc' />
+                            <field name='adatadoc'/>
+                            <newline />
+                            <field name='contoiva_id'/>
+                            <field name='contoconai_id'/>
+                            <field name='contotrasp_id'/>
+                            <newline />
+                   <group colspan="2" col="4">                            
+                            <button icon="gtk-cancel" special="cancel" string="Cancel"/>
+                            <button icon="gtk-ok" name="genera_adprinot" string="Export" type="object"/>
+                    </group>                            
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+               <act_window name="Export Fatture"
+            res_model="gen_adprinot_doc"
+            src_model="fiscaldoc.header"
+            view_mode="form"
+            target="new"
+            key2="client_action_multi"
+            id="action_wizard_genadprinotfa"
+            view_id="wizard_genadprinotfa"/>
+               
+            
+        <record id="wizard_genadprinotriba" model="ir.ui.view">
+            <field name="name">Export File Prima Nota Ad-Hoc</field>
+            <field name="model">gen_adprinot_riba</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="Genera File Riba  Ad-Hoc">
+                    <group col="6" colspan="6">
+                        <group colspan="4" >
+                            <field name='dadatasc' />
+                            <field name='adatasc'/>
+                            <newline />
+                            <field name='contoeff_id'/>
+                            <newline />
+                   <group colspan="2" col="4">                            
+                            <button icon="gtk-cancel" special="cancel" string="Cancel"/>
+                            <button icon="gtk-ok" name="genera_adprinot" string="Export" type="object"/>
+                    </group>                            
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+               <act_window name="Export Riba Ad-Hoc"
+            res_model="gen_adprinot_riba"
+            src_model="effetti"
+            view_mode="form"
+            target="new"
+            key2="client_action_multi"
+            id="action_wizard_genadprinotfa"
+            view_id="wizard_genadprinotriba"/>
+                        
+            
+    </data>
+</openerp>
