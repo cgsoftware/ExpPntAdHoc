@@ -12,6 +12,11 @@ import base64
 
 from osv import fields, osv
 
+def arrot(cr,uid,valore,decimali):
+    #import pdb;pdb.set_trace()
+    return round(valore,decimali(cr)[1])
+
+
 class FiscalDocHeader(osv.osv):
     _inherit = 'fiscaldoc.header'
 
@@ -70,14 +75,25 @@ class GenFileadprinot_Doc(osv.osv_memory):
             cerca =[('data_documento',">=",par.dadatadoc),('data_documento',"<=",par.adatadoc),('flag_exp_adhoc','=',False)]
             docs_ids = doc_head_obj.search(cr,uid,cerca,order='data_documento,name')
             if docs_ids:
+                tot_errori= []
                 for doc in doc_head_obj.browse(cr,uid,docs_ids):
                     # cicla sui documenti trovati
                     if doc.tipo_doc.tipo_documento in ['FA','FD','FI','ND','NC'] and doc.tipo_doc.flag_contabile== True:
                         # DOCUMENTO IDONEO ALLA ESPORTAZIONE
                         numero_reg += 1
                         errori = self.scrive_registrazione(cr, uid,ids, doc, numero_reg)
+                        tot_errori += errori                        
                         ok = doc_head_obj.write(cr,uid,[doc.id],{'flag_exp_adhoc':True})
                 if numero_reg > 0:
+                    file = """"""
+                    for e in tot_errori:
+                                file += e +  "\r\n"
+                                file = """"""
+                                file_name = '/home/openerp/primanota/'+'errori.txt'
+                                fp = open(file_name, 'wb+');
+                                fp.write(file);
+                                fp.close();
+                    
                     ok = tmpfileadprinot_obj.scrive_file(cr,uid,ids)
                     ok = tmpfileadclifor_obj.scrive_file(cr,uid,ids)
                 else:
@@ -194,24 +210,40 @@ class GenFileadprinot_Doc(osv.osv_memory):
               righe_contr[par.contotrasp_id.id] = righe_contr.get(par.contotrasp_id.id,0)+ doc.spese_trasporto
         
         for riga_art in doc.righe_articoli:
-          if riga_art.totale_riga<>0:            
+          #import pdb;pdb.set_trace()
+          if riga_art.totale_riga<>0:     
+            if doc.sconto_partner or doc.sconto_pagamento:
+                    netto = riga_art.totale_riga
+                    netto = arrot(cr,uid,netto,dp.get_precision('Account'))
+                    if doc.sconto_partner:
+                        netto = netto-(netto*doc.sconto_partner/100)
+                        #netto = arrot(cr,uid,netto,dp.get_precision('Account'))
+                    if doc.sconto_pagamento:
+                        netto = netto-(netto*doc.sconto_pagamento/100)
+                        #netto = arrot(cr,uid,netto,dp.get_precision('Account'))
+            else:
+                    netto = riga_art.totale_riga
+                    netto = arrot(cr,uid,netto,dp.get_precision('Account'))
+                    
+
+                     
             if riga_art.contropartita:
                 # c'è la contropartita
-                righe_contr[riga_art.contropartita.id] = righe_contr.get(riga_art.contropartita.id,0)+ riga_art.totale_riga
+                righe_contr[riga_art.contropartita.id] = righe_contr.get(riga_art.contropartita.id,0)+ netto
             else:
                 # non c'è la cerca prima sull'articolo ancora è stato inserito dopo e poi sulla categoria
                 if riga_art.product_id.property_account_income: # Trovato Sulla Articolo
-                    righe_contr[riga_art.product_id.property_account_income.id] = righe_contr.get(riga_art.product_id.property_account_income.id,0)+ riga_art.totale_riga
-                    
+                    righe_contr[riga_art.product_id.property_account_income.id] = righe_contr.get(riga_art.product_id.property_account_income.id,0)+ netto                    
                 else:
                     if riga_art.product_id.categ_id.property_account_income_categ:
-                        righe_contr[riga_art.product_id.categ_id.property_account_income_categ.id] = righe_contr.get(riga_art.product_id.categ_id.property_account_income_categ.id,0)+ riga_art.totale_riga
+                        righe_contr[riga_art.product_id.categ_id.property_account_income_categ.id] = righe_contr.get(riga_art.product_id.categ_id.property_account_income_categ.id,0)+ netto
                         #trovato sulla categoria
                     else:
                         errori.append("Contropartita non trovata su articolo "+riga_art.product_id.default_code+ " Documento "+doc.name)
+                        print "Contropartita non trovata su articolo "+riga_art.product_id.default_code+ " Documento "+doc.name
           if riga_art.totale_conai:
                 # c'è conai
-                righe_contr[par.contoconai_id.id] = righe_contr.get(par.contoconai_id.id,0)+ riga_art.totale_conai
+                righe_contr[par.contoconai_id.id] = righe_contr.get(par.contoconai_id.id,0)+  arrot(cr,uid,riga_art.totale_conai,dp.get_precision('Account'))
         #import pdb;pdb.set_trace()
         for riga_contr in righe_contr:
             numero_riga +=1
@@ -357,22 +389,14 @@ class GenFileadprinot_Doc(osv.osv_memory):
                 #import pdb;pdb.set_trace()    
                 id_rec = tmpfileadclifor_obj.create(cr,uid,riga_cli)
          
-        if errori:
-            # ci sono stati degli errori scrive il file
-            file = """"""
-            for e in errori:
-                file += e +  "\r\n"
-            file = """"""
-            file_name = '/home/openerp/primanota/'+'errori.txt'
-            fp = open(file_name, 'wb+');
-            fp.write(file);
-            fp.close();
 
             #out = base64.encodestring(File)    
         
+        if errori:
+            for e in errori:
+                print e
         
-        
-        return True
+        return errori
     
     def formatta_num(self,cr,uid,numero,lung):
         s1 = str(round(numero,2)).rjust(lung,"0")
@@ -641,6 +665,8 @@ class GenFileadprinot_Riba(osv.osv_memory):
         datasca = doc.data_scadenza[8:10]+'-'+ doc.data_scadenza[5:7]+'-'+doc.data_scadenza[0:4]
         scadid = doc.righe_scadenze[0].scadenza_id.id
         scad_doc_id = self.pool.get('fiscaldoc.header').search(cr,uid,[('name','=',doc.righe_scadenze[0].numero_doc)])
+        if not scad_doc_id:
+            return False
         fatt_obj = self.pool.get('fiscaldoc.header').browse(cr,uid,scad_doc_id)[0]
         riga['numriga']= numero_riga
         riga['numreg'] = numero_reg
